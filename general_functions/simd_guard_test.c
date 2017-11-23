@@ -1,4 +1,8 @@
-
+//
+//  Basic example of calling the header for SIMD detecting functionality.
+//
+//  TODO: most people will think it is ok to look for HW_AVX and ignore OS_AVX
+//
 //  gcc -std=c11 -mavx2 -o simd_guard_test.app simd_guard_test.c
 //  ./simd_guard_test.app
 
