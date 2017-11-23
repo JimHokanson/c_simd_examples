@@ -1,55 +1,23 @@
 //
-//  min_max_01.c
+//  min_max_02.c
 //
-//  Summary Results
-//  - We actually get a speedup when doing max and min (2.5x)
-//  - If we write separate min and max loops, the compiler optimizes
-//  to the same point as 1 loop, but not to the SIMD level
+//  Results
+//  --------
 //
-//
-//  Horizontal min and max of double using:
-//  - _mm256_max_pd
-//  - _mm256_min_pd
-//
-//  TODO: How does this compare to separate min and max loops?
+//  Horizontal min and max of uint16 using:
+//  - _mm256_max_epu16
+//  - _mm256_min_epu16
 
-//  gcc -std=c11 -mavx -o min_max_01.app min_max_01.c
-//  gcc -std=c11 -mavx -O3 -o min_max_01.app min_max_01.c
-//  ./min_max_01.app
+//  gcc -std=c11 -mavx2 -o min_max_02.app min_max_02.c
+//  gcc -std=c11 -mavx2 -O3 -o min_max_02.app min_max_02.c
+//  ./min_max_02.app
 
 #include <immintrin.h>
 #include <stdio.h>
 #include <time.h>
 #include <stdint.h>
 
-#define N_BYTES_SIMD 4
-
-void initialize_data(double *data,size_t N){
-
-double temp_value;
-
-for (size_t i = 0; i < N; i++){
-    data[i] = 0;
-}
-
-//This is somewhat arbitrary
-for (int i = 1000; i < 1000+16; i++){
-    data[i] = 30000+i;
-}
-
-//This is somewhat arbitrary
-for (int i = 2000; i < 2000+16; i++){
-    data[i] = -30000+i;
-}
-
-//Trying to do more comparisons
-temp_value = 0;
-for (int i = 0; i < 25000*10; i+=10){
-    temp_value += 1;
-    data[i] = temp_value;
-} 
-
-}
+#define N_BYTES_SIMD 16
 
 int main() {
     
@@ -66,17 +34,17 @@ int main() {
     //This is redundant but normally we would only have n, not n_extra_in
     
     size_t n_extra = N - (N/N_BYTES_SIMD)*N_BYTES_SIMD;
-    double max_output[N_BYTES_SIMD];
-    double min_output[N_BYTES_SIMD];
-    double *data;
-    double *data_move;
-    double *extra_data;
-    double max_value = 0;
-    double min_value = 0;
+    uint16_t max_output[N_BYTES_SIMD];
+    uint16_t min_output[N_BYTES_SIMD];
+    uint16_t *data;
+    uint16_t *data_move;
+    uint16_t *extra_data;
+    uint16_t max_value = 0;
+    uint16_t min_value = 0;
     clock_t clock_begin;
     clock_t clock_end;
     clock_t clock_end2;
-    
+    uint16_t temp_value;
     
     
     __m256d next;
@@ -84,7 +52,6 @@ int main() {
     __m256d min_result;
     
     double time_spent_std;
-    double time_spent_std2;
     double time_spent_simd;
     double speed_up = 0;
     
@@ -95,14 +62,34 @@ int main() {
         
         //Data initialization    
         //==================================================    
-        data = (double *)calloc(N,sizeof(double));
+        data = (uint16_t *)calloc(N,sizeof(uint16_t));
 
         if (!data){
             printf("Memory Allocation Failure\n");
             return 0;
         }
+
+        for (size_t i = 0; i < N; i++){
+            data[i] = 0;
+        }
+
+        //This is somewhat arbitrary
+        for (int i = 1000; i < 1000+16; i++){
+            data[i] = 30000+i;
+        }
         
-        initialize_data(data,N);
+        //This is somewhat arbitrary
+        for (int i = 2000; i < 2000+16; i++){
+            data[i] = -30000+i;
+        }
+
+        //Trying to do more comparisons
+        temp_value = 0;
+        for (int i = 0; i < 25000*10; i+=10){
+            temp_value += 1;
+            data[i] = temp_value;
+        }
+        //==================================================
     
     
         //Standard approach
@@ -122,63 +109,40 @@ int main() {
         }
         clock_end = clock();
         time_spent_std = (double)(clock_end - clock_begin) / CLOCKS_PER_SEC;
-        printf("Standard: time spent: %0.6f, max value = %g, min_value = %g\n",
+        printf("Standard: time spent: %0.6f, max value = %d, min_value = %d\n",
                 time_spent_std,max_value,min_value);
         
         free(data);
         //=========================================================
-        
-               data = (double *)calloc(N,sizeof(double));
-
-        if (!data){
-            printf("Memory Allocation Failure\n");
-            return 0;
-        }
-        
-        initialize_data(data,N);
-        
-        
-        //Standard approach #2
-        //=========================================================
-        //Can the compiler work magic if we split the loops????
-        clock_begin = clock();
-        max_value = data[0];
-        min_value = data[0];
-        data_move = data;
-        ++data_move;
-        for (size_t j = 1; j < N; j++){
-            if (*data_move > max_value){
-                max_value = *data_move;
-            }
-            ++data_move;
-        }
-        data_move = data;
-        ++data_move;
-        for (size_t j = 1; j < N; j++){
-            if (*data_move < min_value){
-                min_value = *data_move;
-            }
-            ++data_move;
-        }
-        clock_end = clock();
-        time_spent_std2 = (double)(clock_end - clock_begin) / CLOCKS_PER_SEC;
-        printf("Standard2: time spent: %0.6f, max value = %g, min_value = %g\n",
-                time_spent_std,max_value,min_value);
-        
-        free(data);
-        //=========================================================
-        
-        
     
         //Data reinitialization
         //==================================================    
-        data = (double *)calloc(N,sizeof(double));
+        data = (uint16_t *)calloc(N,sizeof(uint16_t));
         if (!data){
             printf("Memory Allocation Failure\n");
             return 0;
         }
+
+        for (size_t i = 0; i < N; i++){
+            data[i] = 0;
+        }
+
+         //This is somewhat arbitrary
+        for (int i = 1000; i < 1000+16; i++){
+            data[i] = 30000+i;
+        }
         
-        initialize_data(data,N);
+        //This is somewhat arbitrary
+        for (int i = 2000; i < 2000+16; i++){
+            data[i] = -30000+i;
+        }
+
+        //Trying to do more comparisons
+        temp_value = 0;
+        for (int i = 0; i < 25000*10; i+=10){
+            temp_value += 1;
+            data[i] = temp_value;
+        }
         //==================================================
     
     
@@ -194,7 +158,7 @@ int main() {
         if (N > N_BYTES_SIMD){
 
             //Start with first 16 values
-            max_result = _mm256_loadu_pd(data);
+            max_result = _mm256_lddqu_si256((__m256i *)data);
             min_result = max_result;
 
             //a   b  c  d
@@ -209,15 +173,15 @@ int main() {
 
             //Compare 1st 16 to next 16, compare result to next 16, etc.
             for (int j = N_BYTES_SIMD; j < (N-N_BYTES_SIMD); j+=N_BYTES_SIMD){
-                next = _mm256_loadu_pd((data+j));
+                next = _mm256_lddqu_si256((__m256i *)(data+j));
                 //Requires AVX
-                max_result = _mm256_max_pd(max_result, next);
-                min_result = _mm256_min_pd(min_result, next);
+                max_result = _mm256_max_epu16(max_result, next);
+                min_result = _mm256_min_epu16(min_result, next);
             }
 
             //Extract max values and reduce ...
-            _mm256_storeu_pd(max_output, max_result);
-            _mm256_storeu_pd(min_output, min_result);
+            _mm256_storeu_si256((__m256i*)max_output, max_result);
+            _mm256_storeu_si256((__m256i*)min_output, min_result);
 
             //Debug
             //------------
@@ -225,6 +189,8 @@ int main() {
               //printf("max value: %d\n",output[i]);  
             //}
 
+            //TODO: Still need to process any extra samples ...
+            
             max_value = max_output[0];
             for (int i = 1; i < N_BYTES_SIMD; i++){
                 if (max_output[i] > max_value){
@@ -258,7 +224,7 @@ int main() {
         }
 
         time_spent_simd = (double)(clock_end - clock_begin) / CLOCKS_PER_SEC;
-        printf("SIMD: time spent: %0.6f, max value = %g, min_value = %g\n",
+        printf("SIMD: time spent: %0.6f, max value = %d, min_value = %d\n",
                 time_spent_simd,max_value,min_value);
 
         speed_up = (time_spent_std/time_spent_simd) + speed_up;
@@ -272,4 +238,3 @@ int main() {
     
     return 0;
 }
-

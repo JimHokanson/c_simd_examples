@@ -3,6 +3,11 @@
 //
 //  Computes horizontal max of uint16_t using _mm256_max_epu16
 //
+//  Result:
+//  - without optimization there is a large difference
+//      - 7.5x speedup
+//  - with optimization the manual code is slightly faster
+//
 //  SIMD:
 //  _mm256_max_epu16     - requires AVX2
 //  _mm256_lddqu_si256
@@ -18,6 +23,8 @@
 
 //  Mac:
 //  gcc -std=c11 -mavx2 -o max_02.app max_02.c
+//  gcc -std=c11 -mavx2 -O3 -o max_02.app max_02.c
+//  ./max_02.app
 
 #include <immintrin.h>
 #include <stdio.h>

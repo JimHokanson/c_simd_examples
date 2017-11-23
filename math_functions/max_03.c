@@ -27,6 +27,8 @@
 
 //  Mac:
 //  gcc -std=c11 -mavx2 -o max_03.app max_03.c
+//  gcc -std=c11 -mavx2 -O3 -o max_03.app max_03.c
+//  ./max_03.app
 
 #include <immintrin.h>
 #include <stdio.h>
