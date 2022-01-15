@@ -47,9 +47,9 @@ int main() {
     uint16_t temp_value;
     
     
-    __m256d next;
-    __m256d max_result;
-    __m256d min_result;
+    __m256i next;
+    __m256i max_result;
+    __m256i min_result;
     
     double time_spent_std;
     double time_spent_simd;
@@ -172,6 +172,9 @@ int main() {
             //    x   x
 
             //Compare 1st 16 to next 16, compare result to next 16, etc.
+            //
+            //TODO: The < N - N_BYTES_SIMD is not correct
+            //  
             for (int j = N_BYTES_SIMD; j < (N-N_BYTES_SIMD); j+=N_BYTES_SIMD){
                 next = _mm256_lddqu_si256((__m256i *)(data+j));
                 //Requires AVX
